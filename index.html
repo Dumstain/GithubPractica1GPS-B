@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ramas GPS-B</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#f4f1ea; --surface:#fffdf8; --surface2:#efe9dd; --text:#1d1b16; --muted:#665f52; --line:#ddd5c5;
+    --c0:#7d7768; --c1:#d9480f; --c2:#c2255c; --c3:#2b8a3e; --c4:#1971c2; --c5:#6741d9; --c6:#c77700;
+    --ok:#2b8a3e; --warn:#b35c00; --bad:#c92a2a;
+    --mono:"JetBrains Mono",ui-monospace,Consolas,monospace; --sans:"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#14161b; --surface:#1c1f26; --surface2:#262a34; --text:#ecebe6; --muted:#a19e95; --line:#323743;
+      --c0:#a5a195; --c1:#ff8a3d; --c2:#f06595; --c3:#51cf66; --c4:#4dabf7; --c5:#9775fa; --c6:#fcc419;
+      --ok:#51cf66; --warn:#fcc419; --bad:#ff6b6b;
+    }
+  }
+  * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 var(--sans); padding:24px 16px 48px; }
+  .wrap { max-width:1200px; margin:0 auto; }
+  a { color:inherit; }
+
+  header.top { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; gap:14px 24px; margin-bottom:8px; }
+  h1 { font:700 clamp(2rem,5vw,3rem)/1.05 var(--sans); margin:0; letter-spacing:-.02em; display:flex; align-items:center; gap:12px; }
+  h1 svg { flex:none; }
+  .sub { color:var(--muted); margin:8px 0 0; font-size:.95rem; }
+  .ctl { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .pill, .btn { display:inline-flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:6px 14px; font:500 .85rem var(--sans); color:var(--text); }
+  .btn { cursor:pointer; }
+  .btn:hover, .btn.on { background:var(--text); color:var(--bg); }
+  .btn:focus-visible, .chip:focus-visible, .team:focus-visible { outline:3px solid var(--c4); outline-offset:2px; }
+  .dot { width:9px; height:9px; border-radius:50%; background:var(--ok); animation:pulse 1.6s infinite; }
+  .pill.sync .dot { background:var(--warn); animation-duration:.7s; }
+  .pill.off .dot, .pill.limit .dot { background:var(--bad); animation:none; }
+  @keyframes pulse { 0% { box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 60%,transparent); } 70%,100% { box-shadow:0 0 0 8px transparent; } }
+
+  .summary { display:flex; flex-wrap:wrap; gap:8px 22px; margin:14px 0 0; color:var(--muted); font-size:.9rem; }
+  .summary b { color:var(--text); font-size:1.15rem; margin-right:4px; }
+
+  h2 { font:700 1.2rem var(--sans); margin:30px 0 12px; display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; }
+  h2 small { font-weight:400; color:var(--muted); font-size:.85rem; }
+
+  /* team cards */
+  .teams { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:14px; }
+  .team { --tc:var(--c0); display:flex; flex-direction:column; justify-content:flex-start; align-items:stretch; text-align:left; font:inherit; color:inherit; background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:16px 16px 10px; position:relative; overflow:hidden; cursor:pointer; transition:transform .15s,box-shadow .15s; }
+  .team::before { content:""; position:absolute; left:0; right:0; top:0; height:5px; background:var(--tc); }
+  .team:hover { transform:translateY(-2px); box-shadow:0 10px 24px -14px rgba(0,0,0,.45); }
+  .team.sel { box-shadow:0 0 0 2px var(--tc); }
+  .team h3 { margin:0; font:700 1.15rem var(--sans); display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .done { font:600 .72rem var(--sans); padding:2px 9px; border-radius:999px; background:var(--tc); color:var(--surface); }
+  .tb { font:.8rem var(--mono); color:var(--muted); margin:4px 0 10px; }
+  .tb.miss { color:var(--bad); font-weight:600; }
+  .bar { height:8px; border-radius:99px; background:var(--surface2); overflow:hidden; }
+  .bar i { display:block; height:100%; background:var(--tc); border-radius:inherit; transition:width .6s ease; }
+  .prog { font-size:.8rem; color:var(--muted); margin:4px 0 8px; }
+  .mem { display:flex; align-items:center; gap:8px; padding:6px 0; border-top:1px dashed var(--line); font-size:.85rem; }
+  .mem .ld { width:8px; height:8px; border-radius:50%; background:var(--tc); flex:none; }
+  .mem code { font:.8rem var(--mono); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .mem .n { color:var(--muted); font-size:.75rem; white-space:nowrap; }
+  .st { font:600 .72rem var(--sans); padding:1px 8px; border-radius:999px; white-space:nowrap; border:1px solid; }
+  .st.ok { color:var(--ok); border-color:var(--ok); background:color-mix(in srgb,var(--ok) 12%,transparent); }
+  .st.pend { color:var(--warn); border-color:var(--warn); background:color-mix(in srgb,var(--warn) 12%,transparent); }
+  .st.empty { color:var(--muted); border-color:var(--line); }
+  .none { color:var(--muted); font-size:.85rem; padding:6px 0 4px; }
+
+  /* graph */
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+  .chip { --tc:var(--text); cursor:pointer; font:600 .82rem var(--sans); padding:5px 14px; border-radius:999px; border:1px solid var(--line); background:var(--surface); color:var(--text); }
+  .chip:hover { border-color:var(--tc); }
+  .chip.active { background:var(--tc); border-color:var(--tc); color:var(--surface); }
+  .legend { display:flex; flex-wrap:wrap; gap:6px 18px; font-size:.8rem; color:var(--muted); margin:0 0 10px; align-items:center; }
+  .legend svg { vertical-align:middle; margin-right:4px; }
+  .graphbox { background:var(--surface); border:1px solid var(--line); border-radius:14px; overflow-x:auto; padding:10px 0; }
+  .graph { display:flex; min-width:max-content; }
+  .graph svg { flex:none; display:block; }
+  .graph path { fill:none; stroke-linecap:round; }
+  .rows { min-width:340px; padding-right:14px; }
+  .row { height:38px; display:flex; align-items:center; gap:8px; white-space:nowrap; border-radius:8px; padding:0 8px; }
+  .row:hover { background:var(--surface2); }
+  .row .msg { font-weight:500; overflow:hidden; text-overflow:ellipsis; max-width:44ch; }
+  .row .meta { color:var(--muted); font-size:.8rem; display:flex; align-items:center; gap:6px; }
+  .row .meta a { font-family:var(--mono); text-decoration:none; }
+  .row .meta a:hover { text-decoration:underline; }
+  .tag { --lc:var(--c0); font:600 .72rem var(--mono); padding:1px 7px; border-radius:6px; border:1px solid var(--lc); background:color-mix(in srgb,var(--lc) 14%,var(--surface)); color:var(--text); }
+  .tag.more { border-style:dashed; }
+  .av { width:18px; height:18px; border-radius:50%; flex:none; display:inline-grid; place-items:center; font:700 .6rem var(--sans); color:#fff; }
+  .empty-g { padding:40px 20px; text-align:center; color:var(--muted); }
+
+  footer.foot { margin-top:22px; font-size:.8rem; color:var(--muted); display:flex; flex-wrap:wrap; gap:6px 18px; justify-content:space-between; align-items:flex-start; }
+  details.opts summary { cursor:pointer; }
+  details.opts .box { margin-top:8px; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:10px 12px; max-width:460px; }
+  details.opts input { width:100%; margin:6px 0; padding:6px 8px; border-radius:6px; border:1px solid var(--line); background:var(--bg); color:var(--text); font:inherit; }
+
+  @media (prefers-reduced-motion:reduce) { .dot { animation:none; } .team, .bar i { transition:none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>
+        <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true">
+          <path d="M10 6V34M10 26C10 18 30 22 30 12" fill="none" stroke="var(--c4)" stroke-width="3.5" stroke-linecap="round"/>
+          <circle cx="10" cy="8" r="4.5" fill="var(--c1)"/><circle cx="10" cy="32" r="4.5" fill="var(--c3)"/><circle cx="30" cy="11" r="4.5" fill="var(--c5)"/>
+        </svg>
+        Ramas GPS-B
+      </h1>
+      <p class="sub">Mapa en vivo de las ramas de cada equipo · <a id="repolink" target="_blank" rel="noopener"></a></p>
+    </div>
+    <div class="ctl">
+      <span class="pill sync" id="status"><i class="dot"></i><span id="statustxt">Conectando…</span></span>
+      <span class="pill" id="count">–</span>
+      <button class="btn" id="refresh" type="button">Actualizar</button>
+    </div>
+  </header>
+  <div class="summary" id="summary"></div>
+
+  <h2>Integración por equipo <small>¿Ya se juntó la rama de cada integrante en la rama del equipo?</small></h2>
+  <div class="teams" id="teams"></div>
+
+  <h2>Mapa de ramas <small>cada línea es una rama, cada punto un commit; lo más nuevo arriba</small></h2>
+  <div class="chips" id="chips"></div>
+  <div class="legend">
+    <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="var(--c4)"/></svg>commit</span>
+    <span><svg width="16" height="16"><circle cx="8" cy="8" r="5.5" fill="var(--surface)" stroke="var(--c4)" stroke-width="3"/></svg>merge (juntar ramas)</span>
+    <span><svg width="30" height="14"><path d="M2 7H28" stroke="var(--c4)" stroke-width="4" stroke-linecap="round"/></svg>rama del equipo</span>
+    <span><svg width="30" height="14"><path d="M2 7H28" stroke="var(--c4)" stroke-width="2.5" stroke-linecap="round"/></svg>rama personal</span>
+  </div>
+  <div class="graphbox"><div class="graph" id="graph"></div></div>
+
+  <footer class="foot">
+    <span id="meta"></span>
+    <details class="opts">
+      <summary>Opciones</summary>
+      <div class="box">
+        <label for="tok">Token de GitHub (opcional): sube el límite de consultas de 60 a 5000 por hora. Se guarda solo en este navegador.</label>
+        <input id="tok" type="password" autocomplete="off" placeholder="ghp_…">
+        <button class="btn" id="savetok" type="button">Guardar</button>
+        <button class="btn" id="clrtok" type="button">Quitar</button>
+      </div>
+    </details>
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var params = new URLSearchParams(location.search);
+  var REPO = params.get('repo') || 'Dumstain/GithubPractica1GPS-B';
+  var MAIN = params.get('main') || 'main';
+  var API = 'https://api.github.com/repos/' + REPO;
+  var IGNORE = { 'gh-pages': 1 };
+  var RH = 38, LW = 17, PAD = 12;
+  var TEAMS = [1, 2, 3, 4, 5, 6];
+  var KEY = 'ramas-gps:' + REPO;
+
+  var state = { commits: {}, lists: {}, branches: [], filter: 'all', busy: false, timer: null, nextAt: 0, rateUntil: 0 };
+
+  var $ = function (id) { return document.getElementById(id); };
+  $('repolink').href = 'https://github.com/' + REPO;
+  $('repolink').textContent = REPO;
+
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function lsGet(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
+  function lsSet(k, v) { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) {} }
+
+  /* cache: commits are immutable, so a commit list keyed by head SHA never changes */
+  try {
+    var cached = JSON.parse(lsGet(KEY) || 'null');
+    if (cached && cached.v === 1) { state.commits = cached.commits || {}; state.lists = cached.lists || {}; state.branches = cached.branches || []; }
+  } catch (e) {}
+  function save() { lsSet(KEY, JSON.stringify({ v: 1, commits: state.commits, lists: state.lists, branches: state.branches })); }
+
+  function parse(name) {
+    var m = /^B-?(\d)(?:[_-](.+))?$/i.exec(name);
+    return m ? { team: +m[1], member: m[2] || null } : null;
+  }
+  function hue(s) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360; return h; }
+  function avatar(c) {
+    if (c.a && /^https:\/\/avatars\.githubusercontent\.com\//.test(c.a)) return '<img class="av" alt="" loading="lazy" referrerpolicy="no-referrer" src="' + esc(c.a) + '&s=40">';
+    return '<span class="av" style="background:hsl(' + hue(c.w || '?') + ' 50% 42%)">' + esc((c.w || '?').charAt(0).toUpperCase()) + '</span>';
+  }
+  var rtf = (typeof Intl !== 'undefined' && Intl.RelativeTimeFormat) ? new Intl.RelativeTimeFormat('es', { numeric: 'auto' }) : null;
+  function ago(ts) {
+    var s = Math.round((Date.now() - ts) / 1000);
+    if (s < 45) return 'justo ahora';
+    var m = Math.round(s / 60); if (m < 60) return rtf ? rtf.format(-m, 'minute') : 'hace ' + m + ' min';
+    var h = Math.round(m / 60); if (h < 36) return rtf ? rtf.format(-h, 'hour') : 'hace ' + h + ' h';
+    var d = Math.round(h / 24); return rtf ? rtf.format(-d, 'day') : 'hace ' + d + ' d';
+  }
+
+  /* ---------- GitHub ---------- */
+  function RateError(until) { this.until = until; }
+  function gh(path) {
+    var headers = { 'Accept': 'application/vnd.github+json' };
+    var tok = lsGet('gh_token');
+    if (tok) headers['Authorization'] = 'Bearer ' + tok;
+    return fetch(API + path, { headers: headers, cache: 'no-cache' }).then(function (r) {
+      var rem = r.headers.get('x-ratelimit-remaining');
+      if (rem !== null) $('meta').textContent = 'Consultas restantes a GitHub esta hora: ' + rem;
+      if ((r.status === 403 || r.status === 429) && rem === '0') throw new RateError((+r.headers.get('x-ratelimit-reset') || 0) * 1000);
+      if (r.status === 409) return [];
+      if (r.status === 404) throw new Error('No encontré el repo ' + REPO);
+      if (!r.ok) throw new Error('GitHub respondió ' + r.status);
+      return r.json();
+    });
+  }
+  function ingest(list) {
+    list.forEach(function (j) {
+      if (state.commits[j.sha]) return;
+      var cm = j.commit || {}, au = cm.author || {}, co = cm.committer || {};
+      state.commits[j.sha] = { p: (j.parents || []).map(function (p) { return p.sha; }), m: (cm.message || '').split('\n')[0],
+        w: (j.author && j.author.login) || au.name || 'alguien', a: (j.author && j.author.avatar_url) || '',
+        t: Date.parse(co.date || au.date) || 0, u: j.html_url || '' };
+    });
+  }
+
+  function poll() {
+    clearTimeout(state.timer);
+    if (state.busy) return;
+    if (Date.now() < state.rateUntil) { setStatus('limit'); return schedule(); }
+    state.busy = true;
+    setStatus('sync');
+    gh('/branches?per_page=100').then(function (br) {
+      var list = br.filter(function (b) { return !IGNORE[b.name]; }).map(function (b) { return { name: b.name, head: b.commit.sha }; });
+      /* team branches first: once merged, they already contain the members' commits, so those need no extra request */
+      var first = [], later = [];
+      list.forEach(function (b) {
+        var p = parse(b.name);
+        ((b.name === MAIN || (p && !p.member)) ? first : later).push(b.head);
+      });
+      return fetchHeads(first).then(function () { return fetchHeads(later); }).then(function () { return list; });
+    }).then(function (list) {
+      state.branches = list;
+      save();
+      setStatus('live');
+    }).catch(function (e) {
+      if (e instanceof RateError) { state.rateUntil = e.until || (Date.now() + 600000); setStatus('limit'); }
+      else if (e instanceof TypeError) setStatus('off');
+      else setStatus('error', e.message);
+    }).then(function () {
+      state.busy = false;
+      render();
+      schedule();
+    });
+  }
+  /* full history of a head, if every ancestor is already known locally */
+  function walk(head) {
+    var out = [], seen = {}, stack = [head];
+    while (stack.length) {
+      var s = stack.pop();
+      if (seen[s]) continue;
+      seen[s] = 1;
+      var c = state.commits[s];
+      if (!c) return null;
+      out.push(s);
+      for (var i = 0; i < c.p.length; i++) stack.push(c.p[i]);
+    }
+    return out;
+  }
+  function fetchHeads(heads) {
+    var todo = {};
+    heads.forEach(function (h) {
+      if (state.lists[h] || todo[h]) return;
+      var w = walk(h);
+      if (w) state.lists[h] = w; else todo[h] = 1;
+    });
+    return Promise.all(Object.keys(todo).map(function (h) {
+      return gh('/commits?sha=' + h + '&per_page=100').then(function (js) { ingest(js); state.lists[h] = js.map(function (c) { return c.sha; }); });
+    }));
+  }
+  /* sin token GitHub da 60 consultas por hora (y las 304 también cuentan): cada 90 s; con token, cada 20 s */
+  function pollMs() { return lsGet('gh_token') ? 20000 : 90000; }
+  function schedule() {
+    clearTimeout(state.timer);
+    var ms = pollMs();
+    state.nextAt = Date.now() + ms;
+    state.timer = setTimeout(function () { if (document.hidden) schedule(); else poll(); }, ms);
+  }
+  function setStatus(s, msg) {
+    var map = { live: ['', 'EN VIVO'], sync: ['sync', 'Actualizando…'], off: ['off', 'Sin conexión'], limit: ['limit', 'Límite de GitHub'], error: ['off', msg || 'Error'] };
+    $('status').className = 'pill ' + map[s][0];
+    var txt = map[s][1];
+    if (s === 'limit' && state.rateUntil) { var d = new Date(state.rateUntil); txt += ' · vuelve a las ' + d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0'); }
+    $('statustxt').textContent = txt;
+  }
+
+  /* ---------- model ---------- */
+  function model() {
+    return state.branches.filter(function (b) { return state.lists[b.head]; }).map(function (b) {
+      var p = parse(b.name), list = state.lists[b.head];
+      return { name: b.name, head: b.head, set: new Set(list), size: list.length, isMain: b.name === MAIN,
+        team: p ? p.team : null, member: p ? p.member : null };
+    });
+  }
+  function rank(b) { return b.isMain ? 0 : b.member ? 1 : b.team ? 2 : 3; }
+  function better(a, b) { return a.size - b.size || rank(a) - rank(b) || (a.name < b.name ? -1 : 1); }
+  function color(b) {
+    if (!b || !b.team) return 'var(--c0)';
+    var c = 'var(--c' + b.team + ')';
+    return b.member && b.alt ? 'color-mix(in srgb,' + c + ' 60%,var(--surface))' : c;
+  }
+
+  /* ---------- render ---------- */
+  function render() {
+    var br = model();
+    var main = br.filter(function (b) { return b.isMain; })[0];
+    var mainSet = main ? main.set : new Set();
+    renderSummary(br, mainSet);
+    renderTeams(br, mainSet);
+    renderChips(br);
+    renderGraph(br);
+  }
+
+  function renderSummary(br, mainSet) {
+    var all = new Set(); br.forEach(function (b) { b.set.forEach(function (s) { all.add(s); }); });
+    var merges = 0; all.forEach(function (s) { if (state.commits[s] && state.commits[s].p.length > 1) merges++; });
+    $('summary').innerHTML = '<span><b>' + br.length + '</b>ramas</span><span><b>' + all.size + '</b>commits</span><span><b>' + merges + '</b>merges</span>';
+  }
+
+  function memberStatus(m, teamBranch, mainSet) {
+    var own = 0; m.set.forEach(function (s) { if (!mainSet.has(s)) own++; });
+    if (!own) return { k: 'empty', own: 0 };
+    if (teamBranch && teamBranch.set.has(m.head)) return { k: 'ok', own: own };
+    return { k: 'pend', own: own };
+  }
+
+  function renderTeams(br, mainSet) {
+    var html = '';
+    TEAMS.forEach(function (t) {
+      var tb = br.filter(function (b) { return b.team === t && !b.member; })[0];
+      var members = br.filter(function (b) { return b.team === t && b.member; }).sort(function (a, b) { return a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1; });
+      var rows = members.map(function (m) { return { b: m, s: memberStatus(m, tb, mainSet) }; });
+      var withWork = rows.filter(function (r) { return r.s.k !== 'empty'; });
+      var ok = withWork.filter(function (r) { return r.s.k === 'ok'; }).length;
+      var pct = withWork.length ? Math.round(ok / withWork.length * 100) : 0;
+      var complete = withWork.length > 0 && ok === withWork.length;
+      var tbLine;
+      if (tb) {
+        var extra = 0; tb.set.forEach(function (s) { if (!mainSet.has(s)) extra++; });
+        var head = state.commits[tb.head];
+        tbLine = '<div class="tb">rama ' + esc(tb.name) + ' · ' + extra + (extra === 1 ? ' commit' : ' commits') + (head ? ' · ' + ago(head.t) : '') + '</div>';
+      } else {
+        tbLine = members.length ? '<div class="tb miss">Falta crear la rama B' + t + '</div>' : '<div class="tb">sin ramas todavía</div>';
+      }
+      html += '<button type="button" class="team' + (state.filter === String(t) ? ' sel' : '') + '" data-f="' + t + '" style="--tc:var(--c' + t + ')">' +
+        '<h3>Equipo B' + t + (complete ? '<span class="done">¡Completa!</span>' : '') + '</h3>' + tbLine +
+        '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
+        '<div class="prog">' + ok + ' de ' + withWork.length + ' ramas integradas</div>' +
+        (rows.length ? rows.map(function (r) {
+          var lab = { ok: 'Integrada', pend: 'Pendiente', empty: 'Sin commits' }[r.s.k];
+          return '<div class="mem"><i class="ld"></i><code title="' + esc(r.b.name) + '">' + esc(r.b.name) + '</code>' +
+            (r.s.own ? '<span class="n">' + r.s.own + ' c</span>' : '') + '<span class="st ' + r.s.k + '">' + lab + '</span></div>';
+        }).join('') : '<div class="none">Nadie ha creado su rama.</div>') +
+        '</button>';
+    });
+    $('teams').innerHTML = html;
+  }
+
+  function renderChips(br) {
+    var html = '<button type="button" class="chip' + (state.filter === 'all' ? ' active' : '') + '" data-f="all">Todos</button>';
+    TEAMS.forEach(function (t) {
+      if (!br.some(function (b) { return b.team === t; })) return;
+      html += '<button type="button" class="chip' + (state.filter === String(t) ? ' active' : '') + '" data-f="' + t + '" style="--tc:var(--c' + t + ')">B' + t + '</button>';
+    });
+    $('chips').innerHTML = html;
+  }
+
+  function renderGraph(br) {
+    var vis = state.filter === 'all' ? br : br.filter(function (b) { return b.isMain || String(b.team) === state.filter; });
+    var shas = new Set();
+    vis.forEach(function (b) { b.set.forEach(function (s) { if (state.commits[s]) shas.add(s); }); });
+    if (!shas.size) {
+      $('graph').innerHTML = '<div class="empty-g">' + (Date.now() < state.rateUntil
+        ? 'GitHub limitó las consultas desde esta red (60 por hora sin token). Agrega un token en <b>Opciones</b> o espera a que se reinicie.'
+        : 'Todavía no hay commits que mostrar.') + '</div>';
+      return;
+    }
+
+    /* each commit lives on the most specific branch that contains it */
+    var home = {};
+    shas.forEach(function (s) {
+      var best = null;
+      vis.forEach(function (b) { if (b.set.has(s) && (!best || better(b, best) < 0)) best = b; });
+      home[s] = best;
+    });
+
+    /* lanes: main, then per team: team branch, then members by first commit */
+    var first = new Map();
+    shas.forEach(function (s) { var b = home[s], t = state.commits[s].t; if (!first.has(b) || t < first.get(b)) first.set(b, t); });
+    var lanes = Array.from(first.keys()).sort(function (a, b) {
+      var ka = a.isMain ? 0 : a.team || 99, kb = b.isMain ? 0 : b.team || 99;
+      if (ka !== kb) return ka - kb;
+      if (!!a.member !== !!b.member) return a.member ? 1 : -1;
+      return first.get(a) - first.get(b);
+    });
+    var laneOf = new Map(), altCount = {};
+    lanes.forEach(function (b, i) {
+      laneOf.set(b, i);
+      if (b.member) { altCount[b.team] = (altCount[b.team] || 0) + 1; b.alt = altCount[b.team] % 2 === 0; }
+    });
+
+    /* topological order, newest first */
+    var kids = {};
+    shas.forEach(function (s) { state.commits[s].p.forEach(function (p) { if (shas.has(p)) kids[p] = (kids[p] || 0) + 1; }); });
+    var ready = [], order = [];
+    shas.forEach(function (s) { if (!kids[s]) ready.push(s); });
+    while (ready.length) {
+      ready.sort(function (a, b) { return state.commits[b].t - state.commits[a].t; });
+      var s = ready.shift();
+      order.push(s);
+      state.commits[s].p.forEach(function (p) { if (shas.has(p) && --kids[p] === 0) ready.push(p); });
+    }
+    var rowOf = {};
+    order.forEach(function (s, i) { rowOf[s] = i; });
+
+    /* lane x positions, with a small gap between teams */
+    var laneX = [], x = PAD, prevG = null;
+    lanes.forEach(function (b, i) {
+      var g = b.isMain ? 0 : (b.team || 99);
+      if (prevG !== null && g !== prevG) x += 10;
+      laneX[i] = x + LW / 2; x += LW; prevG = g;
+    });
+    var X = function (b) { return laneX[laneOf.get(b)]; };
+    var Y = function (i) { return i * RH + RH / 2; };
+    var W = x + PAD, H = order.length * RH;
+
+    var edges = '', dots = '';
+    order.forEach(function (s, i) {
+      var c = state.commits[s], hb = home[s], x1 = X(hb), y1 = Y(i);
+      c.p.forEach(function (p, k) {
+        if (rowOf[p] === undefined) return;
+        var pb = home[p], x2 = X(pb), y2 = Y(rowOf[p]), d, col, w;
+        if (x1 === x2) { d = 'M' + x1 + ' ' + y1 + 'V' + y2; col = color(hb); w = hb.member ? 2.5 : 4; }
+        else if (k === 0) {
+          d = 'M' + x1 + ' ' + y1 + 'V' + (y2 - RH) + 'C' + x1 + ' ' + (y2 - RH * 0.45) + ' ' + x2 + ' ' + (y2 - RH * 0.55) + ' ' + x2 + ' ' + y2;
+          col = color(hb); w = hb.member ? 2.5 : 4;
+        } else {
+          d = 'M' + x1 + ' ' + y1 + 'C' + x1 + ' ' + (y1 + RH * 0.55) + ' ' + x2 + ' ' + (y1 + RH * 0.45) + ' ' + x2 + ' ' + (y1 + RH) + 'V' + y2;
+          col = color(pb); w = pb.member ? 2.5 : 4;
+        }
+        edges += '<path d="' + d + '" style="stroke:' + col + ';stroke-width:' + w + '"/>';
+      });
+      var col = color(hb), tip = esc(c.m) + ' (' + esc(hb.name) + ')';
+      dots += c.p.length > 1
+        ? '<circle cx="' + x1 + '" cy="' + y1 + '" r="6" style="fill:var(--surface);stroke:' + col + ';stroke-width:3.2"><title>' + tip + '</title></circle>'
+        : '<circle cx="' + x1 + '" cy="' + y1 + '" r="5.5" style="fill:' + col + ';stroke:var(--surface);stroke-width:2"><title>' + tip + '</title></circle>';
+    });
+
+    /* branch tags on their head commit */
+    var tags = {};
+    vis.forEach(function (b) { (tags[b.head] = tags[b.head] || []).push(b); });
+    var rows = order.map(function (s) {
+      var c = state.commits[s];
+      var t = (tags[s] || []).sort(function (a, b) { return rank(a) - rank(b) || (a.name < b.name ? -1 : 1); });
+      var shown = t.length > 4 ? t.slice(0, 3) : t;
+      var th = shown.map(function (b) { return '<span class="tag" style="--lc:' + color(b) + '">' + esc(b.name) + '</span>'; }).join('');
+      if (t.length > 4) th += '<span class="tag more" title="' + esc(t.slice(3).map(function (b) { return b.name; }).join(', ')) + '">+' + (t.length - 3) + ' ramas</span>';
+      var sha = s.slice(0, 7);
+      var link = /^https:\/\/github\.com\//.test(c.u) ? '<a href="' + esc(c.u) + '" target="_blank" rel="noopener">' + sha + '</a>' : sha;
+      return '<div class="row">' + th + '<span class="msg" title="' + esc(c.m) + '">' + esc(c.m || '(sin mensaje)') + '</span>' +
+        '<span class="meta">' + avatar(c) + esc(c.w) + ' · ' + ago(c.t) + ' · ' + link + '</span></div>';
+    }).join('');
+
+    $('graph').innerHTML = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Grafo de ramas y commits">' + edges + dots + '</svg>' +
+      '<div class="rows">' + rows + '</div>';
+  }
+
+  /* ---------- wiring ---------- */
+  function pick(e) {
+    var b = e.target.closest('[data-f]');
+    if (!b) return;
+    var f = b.getAttribute('data-f');
+    state.filter = (state.filter === f && f !== 'all') ? 'all' : f;
+    render();
+  }
+  $('teams').addEventListener('click', pick);
+  $('chips').addEventListener('click', pick);
+  $('refresh').addEventListener('click', poll);
+  $('tok').value = lsGet('gh_token');
+  $('savetok').addEventListener('click', function () { lsSet('gh_token', $('tok').value.trim()); state.rateUntil = 0; poll(); });
+  $('clrtok').addEventListener('click', function () { lsSet('gh_token', ''); $('tok').value = ''; });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && Date.now() >= state.nextAt) poll(); });
+  setInterval(function () {
+    if (state.nextAt) $('count').textContent = 'Siguiente en ' + Math.max(0, Math.round((state.nextAt - Date.now()) / 1000)) + ' s';
+  }, 1000);
+
+  render();
+  poll();
+})();
+</script>
+</body>
+</html>

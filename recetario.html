@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recetario GPS-B</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --board:#c9a577; --dot1:rgba(120,80,40,.28); --dot2:rgba(255,235,200,.35);
+    --ink:#3a2812; --ink-soft:#6b4f30; --panel:rgba(255,248,232,.78); --panel-line:rgba(90,60,30,.25);
+    --paper-ink:#2d2a26; --margin:#d9534f; --line:rgba(70,110,190,.26);
+    --ok:#1f9d55; --warn:#c77700; --bad:#c0392b;
+    --hand:"Caveat","Segoe Script","Bradley Hand",cursive; --type:"Special Elite","Courier New",monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --board:#2b221a; --dot1:rgba(0,0,0,.35); --dot2:rgba(255,220,170,.07);
+      --ink:#f4e6d0; --ink-soft:#c6ad8a; --panel:rgba(20,15,10,.62); --panel-line:rgba(255,230,190,.18);
+    }
+  }
+  * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
+  body {
+    margin:0; min-height:100vh; color:var(--ink); font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;
+    background-color:var(--board);
+    background-image:radial-gradient(var(--dot1) 1px,transparent 1.6px),radial-gradient(var(--dot2) 1.4px,transparent 2.2px);
+    background-size:14px 14px,23px 23px; background-position:0 0,7px 9px;
+    padding:20px 16px 48px;
+  }
+  .wrap { max-width:1240px; margin:0 auto; }
+
+  /* header */
+  header.top { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:12px 24px; margin-bottom:14px; }
+  h1 { font:700 clamp(2.4rem,6vw,3.8rem)/1 var(--hand); margin:0; letter-spacing:.5px; text-shadow:0 1px 0 rgba(255,255,255,.25); }
+  h1 small { display:block; font:400 .95rem/1.4 var(--type); letter-spacing:.5px; color:var(--ink-soft); margin-top:6px; text-shadow:none; }
+  h1 small a { color:inherit; }
+  .ctl { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+  .pill { display:inline-flex; align-items:center; gap:8px; background:var(--panel); border:1px solid var(--panel-line); border-radius:999px; padding:6px 14px; font:.85rem var(--type); }
+  .dot { width:10px; height:10px; border-radius:50%; background:var(--ok); box-shadow:0 0 0 0 rgba(31,157,85,.6); animation:pulse 1.6s infinite; }
+  .pill.sync .dot { background:var(--warn); animation:pulse 0.7s infinite; }
+  .pill.off .dot, .pill.limit .dot { background:var(--bad); animation:none; }
+  .pill.demo .dot { background:#7c5cff; }
+  @keyframes pulse { 70% { box-shadow:0 0 0 9px rgba(31,157,85,0); } 100% { box-shadow:0 0 0 0 rgba(31,157,85,0); } }
+  .btn { cursor:pointer; background:var(--panel); color:var(--ink); border:1px solid var(--panel-line); border-radius:999px; padding:6px 14px; font:.85rem var(--type); }
+  .btn:hover, .btn.on { background:var(--ink); color:var(--board); }
+  .btn:focus-visible, .chip:focus-visible { outline:3px solid #fff; outline-offset:2px; }
+
+  /* team chips */
+  .chips { display:grid; grid-template-columns:repeat(auto-fit,minmax(138px,1fr)); gap:10px; margin:12px 0; }
+  .chip { cursor:pointer; text-align:left; color:var(--paper-ink); border:0; border-radius:4px; padding:10px 12px 9px; background:var(--paper,#fff8e1); position:relative; transform:rotate(var(--r,0deg));
+    box-shadow:0 1px 1px rgba(0,0,0,.25),0 6px 10px -6px rgba(0,0,0,.5); transition:transform .15s; font:inherit; }
+  .chip:hover { transform:rotate(0) translateY(-2px); }
+  .chip.active { outline:3px solid var(--ink); outline-offset:2px; transform:rotate(0); }
+  .chip b { font:700 1.5rem/1 var(--hand); display:block; }
+  .chip .n { font:.78rem var(--type); color:#5c5247; }
+  .chip .av { display:flex; margin-top:6px; min-height:22px; }
+  .chip .av > * { margin-right:-6px; }
+  .chip.all { --paper:#fff; }
+
+  /* leaderboard */
+  .board-title { font:700 1.5rem var(--hand); margin:16px 0 4px; }
+  .cooks { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 10px; scrollbar-width:thin; }
+  .cook { flex:none; display:flex; align-items:center; gap:8px; background:var(--panel); border:1px solid var(--panel-line); border-radius:999px; padding:4px 12px 4px 4px; font:.82rem var(--type); white-space:nowrap; }
+  .cook b { font:700 1.1rem var(--hand); }
+
+  /* avatars */
+  .avatar { width:24px; height:24px; border-radius:50%; flex:none; display:inline-grid; place-items:center; color:#fff; font:700 .75rem system-ui,sans-serif; border:2px solid #fff; object-fit:cover; background:#888; }
+  .cook .avatar { width:30px; height:30px; font-size:.9rem; }
+
+  /* papers */
+  .papers { display:grid; grid-template-columns:repeat(auto-fill,minmax(262px,1fr)); gap:30px 24px; padding:18px 4px; }
+  .paper {
+    --paper:#fff8e1; --tape:#f4a261; --rot:0deg; --tape-rot:-3deg;
+    position:relative; min-height:212px; color:var(--paper-ink); background-color:var(--paper);
+    background-image:repeating-linear-gradient(transparent 0 25px,var(--line) 25px 26px); background-position:0 42px;
+    border-radius:3px; padding:30px 14px 46px 46px;
+    box-shadow:0 1px 1px rgba(0,0,0,.22),0 12px 18px -8px rgba(0,0,0,.5);
+    transform:rotate(var(--rot)); transition:transform .2s,box-shadow .2s;
+  }
+  .paper::before { content:""; position:absolute; left:36px; top:0; bottom:0; width:1px; background:var(--margin); opacity:.55; }
+  .paper:hover { transform:rotate(0) translateY(-5px) scale(1.025); z-index:3; box-shadow:0 1px 1px rgba(0,0,0,.22),0 20px 26px -10px rgba(0,0,0,.6); }
+  .paper.t0 { --paper:#ead9ba; --tape:#b08d57; }
+  .paper.t1 { --paper:#fff8e1; --tape:#f4a261; }
+  .paper.t2 { --paper:#fff0f0; --tape:#e76f8a; }
+  .paper.t3 { --paper:#eefaf0; --tape:#5bb381; }
+  .paper.t4 { --paper:#eef5ff; --tape:#5b8def; }
+  .paper.t5 { --paper:#f5eeff; --tape:#9b72e0; }
+  .paper.t6 { --paper:#fff3e6; --tape:#ef8f4a; }
+  .tape { position:absolute; top:-11px; left:50%; width:78px; height:22px; margin-left:-39px; transform:rotate(var(--tape-rot)); background:var(--tape); opacity:.62;
+    box-shadow:0 1px 2px rgba(0,0,0,.25); clip-path:polygon(0 8%,4% 0,8% 10%,12% 0,16% 10%,100% 0,100% 100%,96% 90%,92% 100%,88% 90%,84% 100%,0 92%); }
+  .ph { position:absolute; top:7px; left:46px; right:12px; display:flex; justify-content:space-between; font:.72rem var(--type); color:#7a6e60; letter-spacing:.4px; }
+  .ph .tm { background:var(--tape); color:#fff; border-radius:3px; padding:0 6px; text-shadow:0 1px 0 rgba(0,0,0,.25); }
+  .ph a { color:inherit; text-decoration:none; }
+  .ph a:hover { text-decoration:underline; }
+  .title { font:700 1.55rem/26px var(--hand); margin:0; word-break:break-word; }
+  .body { font:500 1.25rem/26px var(--hand); margin:0; color:#4a443c; word-break:break-word; }
+  .pf { position:absolute; left:46px; right:12px; bottom:9px; display:flex; align-items:center; gap:8px; font:.78rem var(--type); color:#5c5247; }
+  .pf .who { font:700 1.2rem var(--hand); color:var(--paper-ink); max-width:48%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pf .when { margin-left:auto; white-space:nowrap; }
+  .br { position:absolute; left:46px; bottom:34px; font:.7rem var(--type); background:rgba(0,0,0,.07); border-radius:999px; padding:0 8px; max-width:calc(100% - 60px); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .paper.merge { outline:3px double #c9971a; outline-offset:-7px; }
+  .stamp { display:none; position:absolute; right:10px; bottom:50px; transform:rotate(-8deg); border:3px solid #b3261e; color:#b3261e; border-radius:6px; padding:0 8px;
+    font:1.15rem/1.4 var(--type); letter-spacing:2px; opacity:.82; mix-blend-mode:multiply; }
+  .paper.merge .stamp { display:block; }
+  .paper.fresh { animation:drop .85s cubic-bezier(.2,.8,.3,1) both,glow 3s ease-out; }
+  @keyframes drop {
+    0% { opacity:0; transform:translateY(-70px) rotate(calc(var(--rot) - 9deg)) scale(1.18); }
+    60% { opacity:1; transform:translateY(7px) rotate(var(--rot)) scale(1); }
+    100% { opacity:1; transform:translateY(0) rotate(var(--rot)); }
+  }
+  @keyframes glow { 0% { box-shadow:0 0 0 6px rgba(255,255,255,.95),0 0 40px 10px rgba(255,214,102,.95); } 100% { box-shadow:0 1px 1px rgba(0,0,0,.22),0 12px 18px -8px rgba(0,0,0,.5); } }
+
+  .empty { grid-column:1/-1; justify-self:center; max-width:420px; text-align:center; background:#fff8e1; color:var(--paper-ink); padding:30px 28px 26px 48px; transform:rotate(-1.5deg); border-radius:3px; box-shadow:0 12px 18px -8px rgba(0,0,0,.5);
+    background-image:repeating-linear-gradient(transparent 0 25px,var(--line) 25px 26px); position:relative; }
+  .empty::before { content:""; position:absolute; left:34px; top:0; bottom:0; width:1px; background:var(--margin); opacity:.55; }
+  .empty h2 { font:700 1.8rem var(--hand); margin:0 0 4px; }
+  .empty p { font:500 1.25rem/26px var(--hand); margin:0; }
+
+  /* toasts */
+  #toasts { position:fixed; left:14px; bottom:14px; display:flex; flex-direction:column; gap:8px; z-index:20; max-width:min(380px,calc(100vw - 28px)); }
+  .toast { background:#fff8e1; color:var(--paper-ink); border-left:5px solid var(--tape,#f4a261); border-radius:4px; padding:8px 12px; font:1.15rem/1.25 var(--hand); box-shadow:0 8px 18px -6px rgba(0,0,0,.55); animation:slide .4s ease-out; }
+  @keyframes slide { from { transform:translateX(-30px); opacity:0; } to { transform:none; opacity:1; } }
+
+  footer.foot { margin-top:18px; font:.8rem var(--type); color:var(--ink-soft); display:flex; flex-wrap:wrap; gap:6px 18px; justify-content:space-between; align-items:center; }
+  details.opts summary { cursor:pointer; }
+  details.opts .box { margin-top:8px; background:var(--panel); border:1px solid var(--panel-line); border-radius:8px; padding:10px 12px; max-width:480px; }
+  details.opts input { width:100%; margin:6px 0; padding:6px 8px; border-radius:6px; border:1px solid var(--panel-line); background:rgba(255,255,255,.85); color:#222; font:inherit; }
+
+  @media (max-width:560px) { .papers { grid-template-columns:1fr; } }
+  @media (prefers-reduced-motion:reduce) { .paper.fresh { animation:none; } .dot { animation:none; } .toast { animation:none; } .paper, .chip { transition:none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Recetario GPS-B
+      <small>Cada commit es un paso de la receta · <a id="repolink" target="_blank" rel="noopener">repo</a></small>
+    </h1>
+    <div class="ctl">
+      <span class="pill sync" id="status"><i class="dot"></i><span id="statustxt">Conectando…</span></span>
+      <span class="pill" id="count" title="Próxima actualización">–</span>
+      <button class="btn" id="refresh" type="button">Actualizar</button>
+      <button class="btn" id="demo" type="button">Modo demo</button>
+    </div>
+  </header>
+
+  <section aria-label="Equipos"><div class="chips" id="chips"></div></section>
+
+  <div class="board-title">Cocineros del día</div>
+  <div class="cooks" id="cooks" aria-label="Aportaciones por persona"></div>
+
+  <main class="papers" id="papers" aria-live="polite"></main>
+
+  <footer class="foot">
+    <span id="meta"></span>
+    <details class="opts">
+      <summary>Opciones</summary>
+      <div class="box">
+        <label for="tok">Token de GitHub (opcional): sube el límite de consultas de 60 a 5000 por hora. Se guarda solo en este navegador.</label>
+        <input id="tok" type="password" autocomplete="off" placeholder="ghp_…">
+        <button class="btn" id="savetok" type="button">Guardar</button>
+        <button class="btn" id="clrtok" type="button">Quitar</button>
+      </div>
+    </details>
+  </footer>
+</div>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+  var params = new URLSearchParams(location.search);
+  var REPO = params.get('repo') || 'Dumstain/GithubPractica1GPS-B';
+  var API = 'https://api.github.com/repos/' + REPO;
+  
+  var TEAMS = [1, 2, 3, 4, 5, 6];
+
+  var state = { commits: new Map(), branches: new Map(), filter: 'all', mode: params.has('demo') ? 'demo' : 'live',
+    first: true, rateUntil: 0, nextAt: 0, timer: null, demoTimer: null, busy: false };
+  var nodes = new Map();
+
+  var $ = function (id) { return document.getElementById(id); };
+  var els = { papers: $('papers'), chips: $('chips'), cooks: $('cooks'), status: $('status'), statustxt: $('statustxt'),
+    count: $('count'), meta: $('meta'), toasts: $('toasts') };
+
+  $('repolink').href = 'https://github.com/' + REPO;
+  $('repolink').textContent = REPO;
+
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function lsGet(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
+  function lsSet(k, v) { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) {} }
+
+  /* ---------- helpers ---------- */
+  function parseBranch(name) {
+    var m = /^B-?(\d)(?:_(.+))?$/i.exec(name);
+    return m ? { team: +m[1], member: m[2] || null } : null;
+  }
+  function hue(str) { var h = 0; for (var i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) % 360; return h; }
+  function avatar(c, size) {
+    var who = c.who || '?';
+    if (c.avatar && /^https:\/\/avatars\.githubusercontent\.com\//.test(c.avatar)) {
+      return '<img class="avatar" alt="" loading="lazy" referrerpolicy="no-referrer" src="' + esc(c.avatar) + '&s=' + (size || 64) + '">';
+    }
+    return '<span class="avatar" style="background:hsl(' + hue(who) + ' 55% 42%)">' + esc(who.charAt(0).toUpperCase()) + '</span>';
+  }
+  var rtf = (typeof Intl !== 'undefined' && Intl.RelativeTimeFormat) ? new Intl.RelativeTimeFormat('es', { numeric: 'auto' }) : null;
+  function ago(ts) {
+    var s = Math.round((Date.now() - ts) / 1000);
+    if (s < 45) return 'justo ahora';
+    var m = Math.round(s / 60);
+    if (m < 60) return rtf ? rtf.format(-m, 'minute') : 'hace ' + m + ' min';
+    var h = Math.round(m / 60);
+    if (h < 36) return rtf ? rtf.format(-h, 'hour') : 'hace ' + h + ' h';
+    var d = Math.round(h / 24);
+    return rtf ? rtf.format(-d, 'day') : 'hace ' + d + ' d';
+  }
+  function teamLabel(t) { return t ? 'B' + t : 'main'; }
+
+  function derive(c) {
+    var team = 0, personal = null, other = null;
+    c.branches.forEach(function (b) {
+      var p = parseBranch(b);
+      if (!p) return;
+      if (p.member && !personal) personal = { b: b, team: p.team };
+      else if (!p.member && !other) other = { b: b, team: p.team };
+    });
+    if (personal) team = personal.team; else if (other) team = other.team;
+    c.team = team;
+    c.main = personal ? personal.b : (other ? other.b : Array.from(c.branches)[0] || '');
+    c.extra = Math.max(0, c.branches.size - 1);
+  }
+
+  /* ---------- GitHub ---------- */
+  function RateError(until) { this.until = until; }
+  function gh(path) {
+    var headers = { 'Accept': 'application/vnd.github+json' };
+    var tok = lsGet('gh_token');
+    if (tok) headers['Authorization'] = 'Bearer ' + tok;
+    return fetch(API + path, { headers: headers, cache: 'no-cache' }).then(function (r) {
+      var rem = r.headers.get('x-ratelimit-remaining');
+      if (rem !== null) els.meta.textContent = 'Consultas restantes a GitHub: ' + rem;
+      if ((r.status === 403 || r.status === 429) && rem === '0') {
+        throw new RateError((+r.headers.get('x-ratelimit-reset') || 0) * 1000);
+      }
+      if (r.status === 409) return [];
+      if (r.status === 404) throw new Error('No encontré el repo ' + REPO);
+      if (!r.ok) throw new Error('GitHub respondió ' + r.status);
+      return r.json();
+    });
+  }
+
+  function ingest(list, branch) {
+    var added = [];
+    list.forEach(function (j) {
+      var c = state.commits.get(j.sha);
+      if (!c) {
+        var cm = j.commit || {};
+        var au = cm.author || {}, co = cm.committer || {};
+        c = { sha: j.sha, message: cm.message || '', ts: Date.parse(co.date || au.date) || 0,
+          who: (j.author && j.author.login) || au.name || 'alguien', avatar: j.author && j.author.avatar_url,
+          parents: (j.parents || []).length, url: j.html_url, branches: new Set() };
+        state.commits.set(j.sha, c);
+        added.push(c);
+      }
+      c.branches.add(branch);
+    });
+    return added;
+  }
+
+  function poll() {
+    clearTimeout(state.timer);
+    if (state.mode !== 'live') return;
+    if (state.busy) return;
+    if (Date.now() < state.rateUntil) { setStatus('limit'); return schedule(); }
+    state.busy = true;
+    setStatus('sync');
+    var fresh = [];
+    gh('/branches?per_page=100').then(function (br) {
+      br = br.filter(function (b) { return b.name !== 'gh-pages'; });
+      var names = {};
+      br.forEach(function (b) { names[b.name] = 1; });
+      state.branches.forEach(function (_, name) {
+        if (!names[name]) {
+          state.branches.delete(name);
+          state.commits.forEach(function (c, sha) { c.branches.delete(name); if (!c.branches.size) state.commits.delete(sha); });
+        }
+      });
+      var todo = br.filter(function (b) { return state.branches.get(b.name) !== b.commit.sha; });
+      return Promise.all(todo.map(function (b) {
+        return gh('/commits?sha=' + encodeURIComponent(b.name) + '&per_page=40').then(function (js) { return { b: b, js: js }; });
+      }));
+    }).then(function (res) {
+      res.forEach(function (r) { fresh = fresh.concat(ingest(r.js, r.b.name)); state.branches.set(r.b.name, r.b.commit.sha); });
+      setStatus('live');
+    }).catch(function (e) {
+      if (e instanceof RateError) { state.rateUntil = e.until || (Date.now() + 600000); setStatus('limit'); }
+      else if (e instanceof TypeError) setStatus('off');
+      else setStatus('error', e.message);
+    }).then(function () {
+      state.busy = false;
+      commit(fresh);
+      schedule();
+    });
+  }
+  /* sin token GitHub da 60 consultas por hora (y las 304 también cuentan): cada 90 s; con token, cada 20 s */
+  function pollMs() { return lsGet('gh_token') ? 20000 : 90000; }
+  function schedule() {
+    clearTimeout(state.timer);
+    var ms = pollMs();
+    state.nextAt = Date.now() + ms;
+    state.timer = setTimeout(function () { if (document.hidden) schedule(); else poll(); }, ms);
+  }
+
+  /* ---------- render ---------- */
+  function commit(fresh) {
+    var wasFirst = state.first;
+    state.first = false;
+    state.commits.forEach(derive);
+    render(wasFirst ? [] : fresh);
+    fresh.forEach(function () {});
+    if (!wasFirst) {
+      fresh.filter(function (c) { return c.parents < 2; }).sort(function (a, b) { return a.ts - b.ts; }).slice(-4).forEach(function (c) {
+        toast(c);
+      });
+    }
+  }
+
+  function render(fresh) {
+    var freshSet = new Set(fresh.map(function (c) { return c.sha; }));
+    var list = Array.from(state.commits.values()).sort(function (a, b) { return b.ts - a.ts; });
+
+    /* papers */
+    var seen = new Set();
+    list.forEach(function (c, i) {
+      seen.add(c.sha);
+      var el = nodes.get(c.sha);
+      var sig = c.team + '|' + Array.from(c.branches).sort().join(',') + '|' + c.parents;
+      if (!el) {
+        el = document.createElement('article');
+        el.setAttribute('data-sha', c.sha);
+        var n1 = parseInt(c.sha.slice(0, 4), 16), n2 = parseInt(c.sha.slice(4, 6), 16);
+        el.style.setProperty('--rot', ((n1 % 51) / 10 - 2.5).toFixed(1) + 'deg');
+        el.style.setProperty('--tape-rot', ((n2 % 17) - 8) + 'deg');
+        if (freshSet.has(c.sha)) {
+          el.classList.add('fresh');
+          el.addEventListener('animationend', function (ev) { if (ev.animationName === 'glow') el.classList.remove('fresh'); });
+        }
+        nodes.set(c.sha, el);
+        els.papers.appendChild(el);
+      }
+      if (el.getAttribute('data-sig') !== sig) { el.setAttribute('data-sig', sig); fillPaper(el, c); }
+      el.style.order = i;
+      el.hidden = !(state.filter === 'all' || String(c.team) === state.filter);
+      el.querySelector('.when').textContent = ago(c.ts);
+      el.querySelector('.when').setAttribute('data-ts', c.ts);
+    });
+    nodes.forEach(function (el, sha) { if (!seen.has(sha)) { el.remove(); nodes.delete(sha); } });
+
+    /* empty */
+    var empty = $('empty');
+    var visible = list.filter(function (c) { return state.filter === 'all' || String(c.team) === state.filter; }).length;
+    if (!visible) {
+      if (!empty) {
+        empty = document.createElement('div'); empty.id = 'empty'; empty.className = 'empty';
+        empty.innerHTML = '<h2>Aún no hay recetas</h2><p>Crea tu rama, escribe un paso en <b>receta.txt</b> y haz tu primer commit.</p>';
+        els.papers.appendChild(empty);
+      }
+    } else if (empty) empty.remove();
+
+    /* team chips */
+    var per = {};
+    TEAMS.forEach(function (t) { per[t] = { n: 0, who: {} }; });
+    var cooks = {};
+    list.forEach(function (c) {
+      if (c.parents > 1 || !c.team) return;
+      if (!per[c.team]) per[c.team] = { n: 0, who: {} };
+      per[c.team].n++; per[c.team].who[c.who] = c;
+      var k = cooks[c.who] || (cooks[c.who] = { c: c, n: 0 });
+      k.n++;
+    });
+    var total = list.filter(function (c) { return c.parents < 2 && c.team; }).length;
+    var rot = ['-1.2deg', '.8deg', '-.6deg', '1.1deg', '-.9deg', '.5deg'];
+    var html = '<button type="button" class="chip all' + (state.filter === 'all' ? ' active' : '') + '" data-f="all"><b>Todos</b><span class="n">' + total + ' pasos</span></button>';
+    TEAMS.forEach(function (t, i) {
+      var p = per[t];
+      var avs = Object.keys(p.who).slice(0, 5).map(function (w) { return avatar(p.who[w], 48); }).join('');
+      var pap = { 1: '#fff8e1', 2: '#fff0f0', 3: '#eefaf0', 4: '#eef5ff', 5: '#f5eeff', 6: '#fff3e6' }[t];
+      html += '<button type="button" class="chip' + (state.filter === String(t) ? ' active' : '') + '" data-f="' + t + '" style="--paper:' + pap + ';--r:' + rot[i] + '"><b>Equipo B' + t + '</b><span class="n">' + p.n + (p.n === 1 ? ' paso' : ' pasos') + '</span><span class="av">' + avs + '</span></button>';
+    });
+    els.chips.innerHTML = html;
+
+    /* cooks */
+    var arr = Object.keys(cooks).map(function (k) { return cooks[k]; }).sort(function (a, b) { return b.n - a.n; }).slice(0, 12);
+    els.cooks.innerHTML = arr.length ? arr.map(function (k) {
+      return '<span class="cook">' + avatar(k.c, 64) + '<b>' + esc(k.c.who) + '</b>' + k.n + (k.n === 1 ? ' paso' : ' pasos') + '</span>';
+    }).join('') : '<span class="cook">Nadie ha cocinado todavía</span>';
+  }
+
+  function fillPaper(el, c) {
+    el.className = 'paper t' + c.team + (c.parents > 1 ? ' merge' : '') + (el.classList.contains('fresh') ? ' fresh' : '');
+    var lines = c.message.replace(/\r/g, '').split('\n');
+    var title = lines.shift().trim() || '(sin mensaje)';
+    var body = lines.join(' ').trim();
+    if (body.length > 140) body = body.slice(0, 137) + '…';
+    var short = c.sha.slice(0, 7);
+    var sha = (c.url && /^https:\/\/github\.com\//.test(c.url)) ? '<a href="' + esc(c.url) + '" target="_blank" rel="noopener">' + short + '</a>' : short;
+    el.innerHTML = '<i class="tape"></i>' +
+      '<div class="ph"><span>Receta Nº ' + sha + '</span><span class="tm">' + esc(teamLabel(c.team)) + '</span></div>' +
+      '<h3 class="title">' + esc(title) + '</h3>' + (body ? '<p class="body">' + esc(body) + '</p>' : '') +
+      '<span class="br">🌿 ' + esc(c.main) + (c.extra ? ' +' + c.extra : '') + '</span>' +
+      '<span class="stamp">MERGE</span>' +
+      '<div class="pf">' + avatar(c, 48) + '<span class="who">' + esc(c.who) + '</span><span class="when"></span></div>';
+  }
+
+  function toast(c) {
+    var d = document.createElement('div');
+    d.className = 'toast';
+    d.style.setProperty('--tape', {1: '#f4a261', 2: '#e76f8a', 3: '#5bb381', 4: '#5b8def', 5: '#9b72e0', 6: '#ef8f4a'}[c.team] || '#b08d57');
+    d.textContent = '✍️ ' + c.who + ' (' + teamLabel(c.team) + '): ' + (c.message.split('\n')[0] || '').slice(0, 70);
+    els.toasts.appendChild(d);
+    setTimeout(function () { d.remove(); }, 5200);
+    while (els.toasts.children.length > 4) els.toasts.removeChild(els.toasts.firstChild);
+  }
+
+  function setStatus(s, msg) {
+    var map = { live: ['', 'EN VIVO'], sync: ['sync', 'Actualizando…'], off: ['off', 'Sin conexión'], demo: ['demo', 'MODO DEMO'],
+      limit: ['limit', 'Límite de GitHub'], error: ['off', msg || 'Error'] };
+    var m = map[s];
+    els.status.className = 'pill ' + m[0];
+    els.statustxt.textContent = m[1];
+    if (s === 'limit' && state.rateUntil) {
+      var d = new Date(state.rateUntil);
+      els.statustxt.textContent = 'Límite de GitHub · reintenta a las ' + d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0');
+    }
+  }
+
+  /* ---------- demo ---------- */
+  var DEMO = { names: { 1: ['ana', 'luis', 'maria'], 2: ['pedro', 'sofia', 'diego'], 3: ['laura', 'jose', 'carla'], 4: ['mateo', 'valeria', 'raul'], 5: ['andrea', 'hugo', 'irene'], 6: ['pablo', 'lucia', 'omar'] },
+    steps: ['Batir los huevos con el azúcar', 'Agregar la harina cernida', 'Añadir la mantequilla derretida', 'Precalentar el horno a 180 °C', 'Mezclar hasta que no queden grumos', 'Verter la masa en el molde', 'Hornear durante 30 minutos', 'Dejar enfriar sobre una rejilla', 'Decorar con fresas y crema', 'Servir con una bola de helado'],
+    seed: 7, n: 0 };
+  function rnd() { DEMO.seed = (DEMO.seed * 16807) % 2147483647; return DEMO.seed / 2147483647; }
+  function fakeSha() { var s = ''; while (s.length < 40) s += Math.floor(rnd() * 16).toString(16); return s; }
+  function demoCommit(team, who, step, ts, merge) {
+    var c = { sha: fakeSha(), ts: ts, who: who, avatar: null, parents: merge ? 2 : 1, url: '', branches: new Set() };
+    c.message = merge ? "Merge branch 'B" + team + '_' + who + "' into B" + team : 'Paso ' + (step + 1) + ': ' + DEMO.steps[step % DEMO.steps.length];
+    c.branches.add(merge ? 'B' + team : 'B' + team + '_' + who);
+    if (!merge && step % 3 === 2) c.branches.add('B' + team);
+    state.commits.set(c.sha, c);
+    return c;
+  }
+  var demoStepOf = {};
+  function demoSeed() {
+    state.commits.clear();
+    var base = { sha: fakeSha(), ts: Date.now() - 3 * 3600e3, who: 'profe', avatar: null, parents: 1, url: '', message: 'Initial commit', branches: new Set(['main']) };
+    state.commits.set(base.sha, base);
+    var t0 = Date.now() - 95 * 60e3;
+    TEAMS.forEach(function (t) {
+      DEMO.names[t].forEach(function (w, i) {
+        var n = 1 + Math.floor(rnd() * 3);
+        demoStepOf[w] = 0;
+        for (var k = 0; k < n; k++) demoCommit(t, w, demoStepOf[w]++, t0 + Math.floor(rnd() * 90 * 60e3));
+      });
+    });
+    demoCommit(1, 'ana', 0, Date.now() - 4 * 60e3, true);
+    demoCommit(2, 'sofia', 0, Date.now() - 9 * 60e3, true);
+  }
+  function demoTick() {
+    var t = TEAMS[Math.floor(rnd() * TEAMS.length)];
+    var names = DEMO.names[t];
+    var w = names[Math.floor(rnd() * names.length)];
+    var merge = rnd() < 0.18;
+    var c = merge ? demoCommit(t, w, 0, Date.now(), true) : demoCommit(t, w, demoStepOf[w]++ , Date.now());
+    commit([c]);
+  }
+  function startDemo() {
+    state.mode = 'demo'; clearTimeout(state.timer); clearInterval(state.demoTimer);
+    state.first = true; state.branches.clear(); nodes.forEach(function (e) { e.remove(); }); nodes.clear();
+    demoSeed(); commit([]); setStatus('demo'); $('demo').classList.add('on'); $('demo').textContent = 'Salir del demo';
+    state.nextAt = 0;
+    state.demoTimer = setInterval(demoTick, 5500);
+  }
+  function stopDemo() {
+    clearInterval(state.demoTimer); state.mode = 'live';
+    state.commits.clear(); state.branches.clear(); nodes.forEach(function (e) { e.remove(); }); nodes.clear(); state.first = true;
+    $('demo').classList.remove('on'); $('demo').textContent = 'Modo demo';
+    commit([]); poll();
+  }
+
+  /* ---------- wiring ---------- */
+  els.chips.addEventListener('click', function (e) {
+    var b = e.target.closest('.chip');
+    if (!b) return;
+    state.filter = b.getAttribute('data-f');
+    render([]);
+  });
+  $('refresh').addEventListener('click', function () { if (state.mode === 'live') poll(); });
+  $('demo').addEventListener('click', function () { if (state.mode === 'demo') stopDemo(); else startDemo(); });
+  $('tok').value = lsGet('gh_token');
+  $('savetok').addEventListener('click', function () { lsSet('gh_token', $('tok').value.trim()); state.rateUntil = 0; if (state.mode === 'live') poll(); });
+  $('clrtok').addEventListener('click', function () { lsSet('gh_token', ''); $('tok').value = ''; });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && state.mode === 'live' && Date.now() >= state.nextAt) poll(); });
+
+  setInterval(function () {
+    if (state.mode === 'live' && state.nextAt) {
+      var s = Math.max(0, Math.round((state.nextAt - Date.now()) / 1000));
+      els.count.textContent = 'Siguiente en ' + s + ' s';
+    } else els.count.textContent = state.mode === 'demo' ? 'Commits de ejemplo' : '–';
+    document.querySelectorAll('.when[data-ts]').forEach(function (e) { e.textContent = ago(+e.getAttribute('data-ts')); });
+  }, 1000);
+
+  render([]);
+  if (state.mode === 'demo') startDemo(); else poll();
+})();
+</script>
+</body>
+</html>
