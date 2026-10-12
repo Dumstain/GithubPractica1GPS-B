@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 Receta de Bolillo
 
 Ingredientes:
@@ -10,9 +9,9 @@ Ingredientes:
 * 2 cdas. de sal
 * 1 cda. de azúcar
 
-=======
 Preparación resumida
 
 1. Activar la levadura: Disuelve la levadura y el azúcar en 0.5 tazas de agua tibia. Deja reposar 10 minutos hasta que burbujee.
 2. Mesa y amasado: Mezcla la harina y la sal en forma de fuente. Vierte la levadura activada, el resto del agua y la manteca. Amasa firmemente durante 10 a 15 minutos hasta obtener una masa lisa y elástica que no se pegue.
->>>>>>> origin/B1_Jacinto
+3.⁠ ⁠Primer reposo: Coloca la masa en un tazón engrasado, tápala y déjala fermentar en un lugar tibio por 1 hora (o hasta que doble su tamaño).
+4.⁠ ⁠Formar los bolillos: Divide la masa en 10 porciones iguales y boléalas. Aplana cada bola, enróllala de forma apretada hacia ti, sella las orillas y rueda los extremos con las palmas para formar las "orejas" o puntas clásicas del bolillo.
